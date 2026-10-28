@@ -1,0 +1,92 @@
+# One command runs the whole system:
+#   docker compose up --build          -> http://localhost:8080
+# On a server, use deploy.sh instead (adds HTTPS with Caddy).
+#
+#   browser ─▶ web (nginx) ─┬─▶ api1 ─┬─▶ postgres  (users, rooms, documents)
+#                           └─▶ api2 ─┼─▶ redis     (cross-instance pub/sub)
+#                                     └─▶ runner    (sandboxed code execution, no internet)
+#
+# Secrets come from a .env file next to this one (deploy.sh generates it).
+# The defaults below are for local use only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: codesync
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codesync}
+      POSTGRES_DB: codesync
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codesync"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api1: &api
+    build: ./server
+    environment: &api-env
+      NODE_ENV: production
+      PORT: 4000
+      INSTANCE_ID: api1
+      DATABASE_URL: postgres://codesync:${POSTGRES_PASSWORD:-codesync}@postgres:5432/codesync
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-local-dev-only-change-me-in-production}
+      CORS_ORIGIN: ${PUBLIC_URL:-http://localhost:8080}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      RUNNER_URL: http://runner:5050
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-local-runner-token}
+    networks: [default, sandbox]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  api2:
+    <<: *api
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api2
+
+  # Runs untrusted user code. Locked down hard:
+  runner:
+    build: ./runner
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-local-runner-token}
+      MAX_CONCURRENT_RUNS: ${MAX_CONCURRENT_RUNS:-2}
+    networks: [sandbox]          # only the API can reach it; no internet (internal network)
+    init: true                   # reaps zombie processes left by user programs
+    read_only: true              # can't modify its own image
+    tmpfs:
+      - /tmp:rw,exec,nosuid,size=512m,mode=1777   # scratch space for each run, wiped on restart
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, KILL, DAC_OVERRIDE, FOWNER]  # just enough to drop each run to the sandbox user
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    cpus: ${RUNNER_CPUS:-1.5}
+    pids_limit: 512
+    restart: unless-stopped
+
+  web:
+    build: ./client
+    ports:
+      - "${WEB_BIND:-8080}:80"   # deploy.sh binds this to 127.0.0.1 so only Caddy (HTTPS) is public
+    depends_on: [api1, api2]
+    restart: unless-stopped
+
+networks:
+  default: {}
+  sandbox:
+    internal: true   # no route to the internet
+
+volumes:
+  pgdata:

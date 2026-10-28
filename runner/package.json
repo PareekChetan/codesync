@@ -1,0 +1,14 @@
+{
+  "name": "codesync-runner",
+  "version": "1.0.0",
+  "description": "Sandboxed code execution service for CodeSync (Python, Java, C++, Go, JavaScript, TypeScript)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

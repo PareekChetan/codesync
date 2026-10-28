@@ -1,0 +1,5 @@
+# Keep Linux line endings so deploy.sh and config files work on the server,
+# even when the repo is committed from Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

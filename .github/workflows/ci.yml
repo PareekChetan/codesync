@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: codesync
+          POSTGRES_PASSWORD: codesync
+          POSTGRES_DB: codesync_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U codesync" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  runner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Test the sandbox inside the real production image (all compilers, privilege drop).
+      - run: docker build -t codesync-runner ./runner
+      - run: docker run --rm -v "$PWD/runner/test:/app/test:ro" codesync-runner node --test test/*.test.js
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [server, client, runner]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
