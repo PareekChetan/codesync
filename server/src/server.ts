@@ -1,7 +1,7 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from './app.js';
-import { RedisBridge, type Bridge } from './collab/bridge.js';
+import { LocalBridge, RedisBridge, type Bridge } from './collab/bridge.js';
 import { PostgresDocStore, type DocStore } from './collab/docStore.js';
 import { RoomManager } from './collab/roomManager.js';
 import { attachCollabServer } from './collab/wsServer.js';
@@ -21,7 +21,9 @@ export async function startServer(opts: {
   store?: DocStore;
   unloadDelayMs?: number;
 } = {}): Promise<RunningServer> {
-  const bridge = new RedisBridge(config.REDIS_URL, opts.instanceId ?? config.INSTANCE_ID);
+  const instanceId = opts.instanceId ?? config.INSTANCE_ID;
+  // No REDIS_URL => single-instance mode (no cross-instance relay needed).
+  const bridge: Bridge = config.REDIS_URL ? new RedisBridge(config.REDIS_URL, instanceId) : new LocalBridge(instanceId);
   const rooms = new RoomManager(opts.store ?? new PostgresDocStore(), bridge, {
     persistDebounceMs: config.PERSIST_DEBOUNCE_MS,
     persistMaxWaitMs: config.PERSIST_MAX_WAIT_MS,

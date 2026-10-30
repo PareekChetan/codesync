@@ -134,6 +134,9 @@ Java 11+ single-file source launch (`java Main.java`) compiles in memory and run
 **Q: Why is the Go build fast?**
 Go compiles the standard library into a build cache. The Docker image pre-warms that cache, and each run gets a private copy, so the first run is ~1s instead of ~7s and one user's run can't poison another user's cache.
 
+**Q: Your live demo runs on a free host. How does code run there?**
+Execution is behind an `Executor` interface (`server/src/rooms/executors.ts`). With docker-compose it uses my own sandboxed runner; on the free single-container host (Render) it uses the Judge0 API instead, which is one environment variable. The same pattern applies to the cross-instance bridge: Redis when there are several instances, a no-op in-process bridge when there's one. One small wrinkle: Judge0 compiles Java as `Main.java`, so the adapter wraps LeetCode-style `class Solution` code in a `Main` class.
+
 **Q: What if the runner is down?**
 The editor keeps working; only Run is affected (the API returns 503). For JavaScript, the browser falls back to a Web Worker: no DOM, cookies or localStorage access, network APIs removed, and killed after 3 seconds.
 

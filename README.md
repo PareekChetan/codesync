@@ -1,4 +1,4 @@
-﻿# CodeSync: Real-time Collaborative Code Editor
+# CodeSync: Real-time Collaborative Code Editor
 
 Write code together in the browser, like Google Docs for code. Share a link, see each other's cursors live, and run **Java, Python, C++, Go, JavaScript and TypeScript** with output that everyone in the room sees.
 
@@ -52,6 +52,7 @@ flowchart LR
 | Abuse | Auth checked **during the HTTP upgrade**, token-bucket rate limit per socket, payload cap, login rate limit | Unauthenticated clients never get a socket. |
 | Dead connections | Ping/pong heartbeat every 30s | Drops ghost users when laptops sleep or networks die. |
 | Running untrusted code | **Separate runner service** on an internal-only network; each run drops to an unprivileged user under `prlimit`; read-only container, all capabilities dropped but the few needed | The API never executes code. A malicious program can't reach the internet, the database, or other users' runs. |
+| Different hosting environments | **Pluggable executor** (`RUNNER_MODE`): own sandboxed runner, or the Judge0 API on free hosts; **pluggable bridge**: Redis for many instances, in-process for one | The same code runs on a 6-container VM setup or a single free container, switched by environment variables. |
 | Too many runs at once | **Bounded queue** (N parallel, 20 waiting, then HTTP 429) + 20 runs/min per user | Backpressure: fail fast instead of slowing everyone down. |
 
 More detail in [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md).
@@ -93,7 +94,9 @@ Open http://localhost:8080 in two browser windows (or one normal + one incognito
 
 ### Deploy it live
 
-On any Ubuntu server: `bash deploy.sh`. It installs Docker, generates secrets and serves the site over HTTPS. Full walkthrough (free student options, Windows SSH, troubleshooting): [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+**Free, no server:** Render + Neon + Judge0, a single container built from the root `Dockerfile`. Step by step: [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
+
+**Full setup on a VM:** on any Ubuntu server, run `bash deploy.sh`. It installs Docker, generates secrets and serves the site over HTTPS. Full walkthrough (free student options, Windows SSH, troubleshooting): [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Option 2: Local development
 

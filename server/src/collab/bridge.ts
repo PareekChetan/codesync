@@ -102,3 +102,19 @@ export class RedisBridge implements Bridge {
     await Promise.allSettled([this.pub.quit(), this.sub.quit()]);
   }
 }
+
+/**
+ * Bridge for a SINGLE server instance (e.g. a free hosting plan with no Redis).
+ * With only one instance there is nobody to relay to, so everything is a no-op.
+ * Swapping RedisBridge for this is the only change needed to run without Redis.
+ */
+export class LocalBridge implements Bridge {
+  constructor(readonly instanceId: string = config.INSTANCE_ID) {}
+  async subscribe(): Promise<void> {}
+  async unsubscribe(): Promise<void> {}
+  publish(): void {}
+  async ping(): Promise<boolean> {
+    return true;
+  }
+  async close(): Promise<void> {}
+}

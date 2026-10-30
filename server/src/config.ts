@@ -10,6 +10,7 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().default('postgres://codesync:codesync@localhost:5432/codesync'),
+  /** Set to an empty string to run as a single instance without Redis (e.g. free hosting). */
   REDIS_URL: z.string().default('redis://localhost:6379'),
   JWT_SECRET: z.string().min(16).default('dev-only-secret-change-me-please'),
   JWT_EXPIRES_IN: z.string().default('7d'),
@@ -27,6 +28,17 @@ const schema = z.object({
   RUNNER_URL: z.string().default('http://localhost:5050'),
   RUNNER_TOKEN: z.string().default(''),
   RUNS_PER_MINUTE: z.coerce.number().int().positive().default(20),
+  /**
+   * Which code-execution backend to use:
+   *  - "runner": our own sandboxed runner service (docker-compose, VM deploys)
+   *  - "judge0": the Judge0 API (for free hosts that can't run compilers)
+   */
+  RUNNER_MODE: z.enum(['runner', 'judge0']).default('runner'),
+  JUDGE0_URL: z.string().default('https://judge0-ce.p.rapidapi.com'),
+  JUDGE0_KEY: z.string().default(''),
+  JUDGE0_HOST: z.string().default('judge0-ce.p.rapidapi.com'),
+  /** If set, the API also serves the built React app from this folder (single-service deploys). */
+  STATIC_DIR: z.string().default(''),
   INSTANCE_ID: z.string().default(() => randomUUID().slice(0, 8)),
 });
 
