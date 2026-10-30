@@ -21,9 +21,9 @@ interface Props {
 }
 
 export function OutputPanel({ run, runningBy, runnable, languageLabel, stdin, onStdinChange }: Props) {
-  const isHtml = languageLabel === 'HTML';
+  const isPreview = languageLabel === 'HTML' || languageLabel === 'CSS';
 
-  if (isHtml) {
+  if (isPreview) {
     return (
       <aside className="side side-preview">
         <section className="output">
@@ -40,7 +40,8 @@ export function OutputPanel({ run, runningBy, runnable, languageLabel, stdin, on
           ) : (
             <div className="output-body">
               <p className="muted">
-                Press <kbd>Run</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to preview this page. Everyone in the room sees it.
+                Press <kbd>Run</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to preview{' '}
+                {languageLabel === 'CSS' ? 'these styles on a sample page' : 'this page'}. Everyone in the room sees it.
               </p>
             </div>
           )}

@@ -5,7 +5,7 @@ import { OutputPanel, type SharedRun } from '../components/OutputPanel';
 import { PresenceBar } from '../components/PresenceBar';
 import { api, ApiError, type Language, type Room, type RunResult } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { LANGUAGES, languageLabel } from '../lib/languages';
+import { cssPreviewPage, LANGUAGES, languageLabel } from '../lib/languages';
 import { runJavaScript } from '../lib/runner';
 import { useCollabRoom } from '../lib/useCollabRoom';
 
@@ -118,9 +118,10 @@ export function EditorPage() {
     const runMap = collab.doc.getMap('run');
     const by = user?.name ?? 'Someone';
     const code = collab.doc.getText('code').toString();
-    // HTML doesn't execute on the server: everyone in the room gets a live preview.
-    if (language === 'html') {
-      runMap.set('last', { by, at: Date.now(), language: 'HTML', durationMs: 0, timedOut: false, logs: [], html: code } satisfies SharedRun);
+    // HTML and CSS don't execute on the server: everyone in the room gets a live preview.
+    if (language === 'html' || language === 'css') {
+      const html = language === 'css' ? cssPreviewPage(code) : code;
+      runMap.set('last', { by, at: Date.now(), language: languageLabel(language), durationMs: 0, timedOut: false, logs: [], html } satisfies SharedRun);
       return;
     }
 
