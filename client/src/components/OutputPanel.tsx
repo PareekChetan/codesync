@@ -1,3 +1,5 @@
+import { PreviewFrame } from './PreviewFrame';
+
 export interface SharedRun {
   by: string;
   at: number;
@@ -5,6 +7,8 @@ export interface SharedRun {
   durationMs: number;
   timedOut: boolean;
   logs: { level: 'log' | 'error' | 'warn' | 'info'; text: string }[];
+  /** Set for HTML rooms: the page to show in the live preview. */
+  html?: string;
 }
 
 interface Props {
@@ -17,6 +21,34 @@ interface Props {
 }
 
 export function OutputPanel({ run, runningBy, runnable, languageLabel, stdin, onStdinChange }: Props) {
+  const isHtml = languageLabel === 'HTML';
+
+  if (isHtml) {
+    return (
+      <aside className="side side-preview">
+        <section className="output">
+          <header className="panel-header">
+            <span>Preview</span>
+            {run?.html !== undefined && (
+              <span className="output-meta">
+                {run.by} · {new Date(run.at).toLocaleTimeString()}
+              </span>
+            )}
+          </header>
+          {run?.html !== undefined ? (
+            <PreviewFrame html={run.html} runAt={run.at} />
+          ) : (
+            <div className="output-body">
+              <p className="muted">
+                Press <kbd>Run</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to preview this page. Everyone in the room sees it.
+              </p>
+            </div>
+          )}
+        </section>
+      </aside>
+    );
+  }
+
   return (
     <aside className="side">
       <section className="input-section">

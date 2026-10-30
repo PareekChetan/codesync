@@ -118,6 +118,12 @@ export function EditorPage() {
     const runMap = collab.doc.getMap('run');
     const by = user?.name ?? 'Someone';
     const code = collab.doc.getText('code').toString();
+    // HTML doesn't execute on the server: everyone in the room gets a live preview.
+    if (language === 'html') {
+      runMap.set('last', { by, at: Date.now(), language: 'HTML', durationMs: 0, timedOut: false, logs: [], html: code } satisfies SharedRun);
+      return;
+    }
+
     runMap.set('running', { by, at: Date.now() } satisfies RunningState);
 
     let logs: SharedRun['logs'];

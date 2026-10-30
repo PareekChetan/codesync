@@ -38,7 +38,13 @@ export const LANGUAGES: { id: Language; label: string; runnable: boolean; starte
     runnable: true,
     starter: 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("Hello from Go!")\n}\n',
   },
-  { id: 'html', label: 'HTML', runnable: false, starter: '<!doctype html>\n' },
+  {
+    id: 'html',
+    label: 'HTML',
+    runnable: true, // "Run" renders a live preview in a sandboxed frame
+    starter:
+      '<!doctype html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; padding: 24px; }\n    h1 { color: #2563eb; }\n  </style>\n</head>\n<body>\n  <h1>Hello from CodeSync</h1>\n  <button onclick="this.textContent = \'Clicked!\'">Click me</button>\n</body>\n</html>\n',
+  },
   { id: 'css', label: 'CSS', runnable: false, starter: 'body {\n}\n' },
   { id: 'markdown', label: 'Markdown', runnable: false, starter: '# Notes\n' },
 ];

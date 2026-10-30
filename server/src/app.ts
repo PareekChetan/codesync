@@ -14,6 +14,19 @@ import { errorHandler, notFound } from './middleware/errors.js';
 import { roomsRouter } from './rooms/routes.js';
 import { runRouter } from './rooms/run.js';
 
+const PREVIEW_HOST_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"></head><body>
+<script>
+  addEventListener('message', function (e) {
+    if (e.source !== parent || !e.data || e.data.type !== 'render' || typeof e.data.html !== 'string') return;
+    document.open();
+    document.write(e.data.html);
+    document.close();
+  });
+  parent.postMessage({ type: 'preview-ready' }, '*');
+</script>
+</body></html>`;
+
 export function createApp(deps: { bridge: Bridge }) {
   const app = express();
   app.disable('x-powered-by');
@@ -32,6 +45,30 @@ export function createApp(deps: { bridge: Bridge }) {
       },
     }),
   );
+  /**
+   * Host page for the sandboxed HTML preview (see client PreviewFrame).
+   * The client loads it in an <iframe sandbox="allow-scripts"> WITHOUT
+   * allow-same-origin, so it runs with an opaque origin and can't read this
+   * app's storage or cookies. It gets its own CSP that allows the user's inline
+   * scripts and styles, while the rest of the app keeps the strict policy above.
+   */
+  app.get('/sandbox/preview', (_req, res) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'none'",
+        "script-src 'unsafe-inline' https:",
+        "style-src 'unsafe-inline' https:",
+        'img-src * data: blob:',
+        'font-src * data:',
+        'media-src * data: blob:',
+        "frame-ancestors 'self'",
+      ].join('; '),
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('html').send(PREVIEW_HOST_HTML);
+  });
+
   app.use(cors({ origin: config.CORS_ORIGIN.split(','), credentials: true }));
   app.use(express.json({ limit: '100kb' }));
   app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/healthz' || req.url === '/metrics' } }));
