@@ -25,22 +25,20 @@ const WORKER_SOURCE = `
   }
   // Block network access from user code.
   self.fetch = undefined; self.XMLHttpRequest = undefined; self.WebSocket = undefined; self.importScripts = undefined;
-  onmessage = async (e) => {
-    try {
-      const fn = new (Object.getPrototypeOf(async function () {}).constructor)(e.data);
-      await fn();
-    } catch (err) {
-      postMessage({ type: 'log', level: 'error', text: format(err) });
-    }
-    postMessage({ type: 'done' });
-  };
 `;
 
 const MAX_LOG_LINES = 500;
 
 export function runJavaScript(code: string, timeoutMs = 3000): Promise<RunResult> {
   return new Promise((resolve) => {
-    const blobUrl = URL.createObjectURL(new Blob([WORKER_SOURCE], { type: 'text/javascript' }));
+    // The user's code is placed directly into the worker script instead of being
+    // eval'd, so it runs under a strict Content Security Policy (no 'unsafe-eval').
+    const source =
+      WORKER_SOURCE +
+      `\n;(async () => {\n${code}\n})()` +
+      `.catch((err) => postMessage({ type: 'log', level: 'error', text: format(err) }))` +
+      `.finally(() => postMessage({ type: 'done' }));\n`;
+    const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
     const worker = new Worker(blobUrl);
     const logs: RunResult['logs'] = [];
     const start = performance.now();
@@ -62,6 +60,5 @@ export function runJavaScript(code: string, timeoutMs = 3000): Promise<RunResult
       logs.push({ level: 'error', text: e.message });
       finish(false);
     };
-    worker.postMessage(code);
   });
 }
